@@ -1,9 +1,8 @@
-from typing import Sequence, Any
+from typing import Union, Sequence, Any
 from langflow.base.langchain_utilities.model import LCToolComponent
 from langflow.inputs import SecretStrInput, MessageTextInput, DropdownInput, StrInput
 from langchain_core.tools import StructuredTool
 from composio_langchain import ComposioToolSet, App, Action
-
 
 class ComposioAPIComponent(LCToolComponent):
     display_name: str = "Composio Tools"
@@ -146,23 +145,24 @@ class ComposioAPIComponent(LCToolComponent):
         if field_name == "api_key":
             build_config = self.update_app_names_with_connected_status(build_config)
             return build_config
-
+        
         if field_name in {"app_names", "auth_status_config"}:
+            build_config = self.update_app_names_with_connected_status(build_config)
             build_config["auth_status_config"]["value"] = self.check_for_authorization(self.get_normalized_app_name())
 
             all_action_names = [action_name for action_name in Action.__annotations__]
             app_action_names = [
-                action_name
-                for action_name in all_action_names
+                action_name for action_name in all_action_names
                 if action_name.lower().startswith(self.get_normalized_app_name().lower() + "_")
             ]
             build_config["action_names"]["options"] = app_action_names
         return build_config
 
+
     def build_tool(self) -> Sequence[StructuredTool]:
         composio_toolset = self._build_wrapper()
-        composio_tools = composio_toolset.get_actions(actions=[self.action_names], entity_id=self.entity_id)
-        return composio_tools[0]
+        composio_tools = composio_toolset.get_tools(apps=['github'])
+        return [composio_tools[0],composio_tools[1]]
 
     def _build_wrapper(self) -> ComposioToolSet:
         return ComposioToolSet(api_key=self.api_key)
